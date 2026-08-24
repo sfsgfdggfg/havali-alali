@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0915">
-<title>Havalı Alalı — v1.0.9 Safari Mobile Menu Fix</title>
+<title>Havalı Alalı — v1.0.10 Result Buttons Fix</title>
 <style>
 :root{
   --pink:#ff4da6;--purple:#8c5cff;--blue:#4db9ff;--green:#6ce678;--red:#ff5d61;
@@ -1810,6 +1810,17 @@ body.menuOpen{
   font-weight:900;
 }
 
+
+/* v1.0.10 — result screen must accept taps */
+#overlay.resultMode{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+#overlay.resultMode .card,
+#overlay.resultMode .start{
+  pointer-events:auto!important;
+}
+
 </style>
 </head>
 <body class="menuOpen">
@@ -1857,7 +1868,7 @@ body.menuOpen{
   <div id="nightWash"></div><div id="beatGlow"></div>
   <div id="skyline"></div><div id="floor"></div>
   <div id="topbar">
-    <div id="title"><b>DEREN</b> vs BARIŞ<div id="song">ENTER THE PARTY · v1.0.9 · SAFARI MOBILE MENU FIX</div></div>
+    <div id="title"><b>DEREN</b> vs BARIŞ<div id="song">ENTER THE PARTY · v1.0.10 · RESULT BUTTONS FIX</div></div>
     <div id="hud"><div id="health"><div id="healthFill"></div></div><div id="names"><span>BARIŞ</span><span>DEREN</span></div></div>
     <div id="tools">←↓↑→ / ASWD<br><button id="fullscreen">⛶ TAM EKRAN</button></div>
   </div>
@@ -2058,7 +2069,7 @@ body.menuOpen{
       </div>
 
       <div class="mmFooter">
-        <span>v1.0.9 · <span id="mmJsState">JS ?</span></span>
+        <span>v1.0.10 · <span id="mmJsState">JS ?</span></span>
         <button type="button" class="mmLink" data-mm-action="open" data-mm-panel="mmCreditsPanel">KREDİLER</button>
       </div>
     </div>
@@ -2647,6 +2658,8 @@ function clickSound(freq=240,gain=.025){
 
 async function startGame(ev){
   if(running)return;
+  const resultOverlay=document.getElementById('overlay');
+  resultOverlay.classList.remove('resultMode');
   const btn=ev&&ev.currentTarget?ev.currentTarget:document.querySelector('#overlay .start');
   const status=document.getElementById('analysisStatus');
   if(btn){btn.disabled=true;btn.textContent=analysisReady?'HAZIRLANIYOR…':'ŞARKI ANALİZ EDİLİYOR…';}
@@ -3061,7 +3074,9 @@ async function finish(){
     await playVictoryDance();
   }
 
-  const o=document.getElementById('overlay');o.style.display='grid';
+  const o=document.getElementById('overlay');
+  o.classList.add('resultMode');
+  o.style.display='grid';
   o.innerHTML=`<div class="card"><div class="logo"><span>${health>0?'SONG CLEAR!':'FAILED'}</span></div>
     <h2>Enter the Party — ${rank}</h2>
     <div class="small">Score: <b>${score}</b><br>Hit: <b>${hits}/${totalPlayer}</b> · Miss: <b>${misses}</b><br>Basit isabet oranı: <b>%${acc}</b></div>
@@ -3070,8 +3085,29 @@ async function finish(){
       <button type="button" class="start alt" id="mainMenuAfter">ANA MENÜ</button>
     </div>
     <div class="credit">“Enter the Party” — Kevin MacLeod · CC BY 3.0 · incompetech.com<br>Chart: ${analysisMeta?'ses dalgası onset analizi':'120 BPM yedek'} · Sahne: Back Alley v0.6 · Cutscene: v0.7.1 · Hold Notes: v0.9</div></div>`;
-  document.getElementById('again').addEventListener('click',startGame);
-  document.getElementById('mainMenuAfter').addEventListener('click',()=>location.reload());
+
+  const againBtn=document.getElementById('again');
+  const menuBtn=document.getElementById('mainMenuAfter');
+
+  // click works on desktop; touchend is an explicit Mobile Safari fallback.
+  let resultTouchAt=0;
+  const bindResultButton=(btn,fn)=>{
+    btn.addEventListener('touchend',e=>{
+      resultTouchAt=Date.now();
+      e.preventDefault();
+      e.stopPropagation();
+      fn(e);
+    },{passive:false});
+    btn.addEventListener('click',e=>{
+      if(Date.now()-resultTouchAt<700){e.preventDefault();return;}
+      e.preventDefault();
+      e.stopPropagation();
+      fn(e);
+    });
+  };
+
+  bindResultButton(againBtn,e=>startGame({currentTarget:againBtn}));
+  bindResultButton(menuBtn,()=>location.reload());
 }
 
 function openMobilePanel(id){
