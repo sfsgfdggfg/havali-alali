@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0915">
-<title>Havalı Alalı — v1.0.10 Result Buttons Fix</title>
+<title>Havalı Alalı — v1.1.0 Difficulty Select</title>
 <style>
 :root{
   --pink:#ff4da6;--purple:#8c5cff;--blue:#4db9ff;--green:#6ce678;--red:#ff5d61;
@@ -1821,6 +1821,63 @@ body.menuOpen{
   pointer-events:auto!important;
 }
 
+
+/* v1.1.0 — difficulty selection */
+.diffGrid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.diffBtn{
+  border:1px solid #ffffff1b;
+  border-radius:14px;
+  padding:15px 12px;
+  color:#fff;
+  background:linear-gradient(160deg,#1b1928,#0d0d17);
+  text-align:left;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.diffBtn:hover{filter:brightness(1.12)}
+.diffBtn strong{
+  display:block;
+  font-size:18px;
+  margin-bottom:6px;
+}
+.diffBtn small{
+  display:block;
+  line-height:1.45;
+  opacity:.72;
+}
+.diffBtn.easy{border-color:#6ce67880}
+.diffBtn.normal{border-color:#4db9ff80}
+.diffBtn.hard{border-color:#ff5d6180}
+
+.mmDiffGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:9px;
+}
+.mmDiffBtn{
+  width:100%;
+  border:1px solid #ffffff1b;
+  border-radius:12px;
+  padding:13px;
+  color:#fff;
+  background:linear-gradient(160deg,#1b1928,#0d0d17);
+  text-align:left;
+  touch-action:manipulation;
+}
+.mmDiffBtn strong{display:block;font-size:17px;margin-bottom:4px}
+.mmDiffBtn small{display:block;font-size:11px;line-height:1.45;opacity:.7}
+.mmDiffBtn.easy{border-left:6px solid #6ce678}
+.mmDiffBtn.normal{border-left:6px solid #4db9ff}
+.mmDiffBtn.hard{border-left:6px solid #ff5d61}
+
+@media (max-width:700px){
+  .diffGrid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body class="menuOpen">
@@ -1868,7 +1925,7 @@ body.menuOpen{
   <div id="nightWash"></div><div id="beatGlow"></div>
   <div id="skyline"></div><div id="floor"></div>
   <div id="topbar">
-    <div id="title"><b>DEREN</b> vs BARIŞ<div id="song">ENTER THE PARTY · v1.0.10 · RESULT BUTTONS FIX</div></div>
+    <div id="title"><b>DEREN</b> vs BARIŞ<div id="song">ENTER THE PARTY · v1.1.0 · DIFFICULTY SELECT</div></div>
     <div id="hud"><div id="health"><div id="healthFill"></div></div><div id="names"><span>BARIŞ</span><span>DEREN</span></div></div>
     <div id="tools">←↓↑→ / ASWD<br><button id="fullscreen">⛶ TAM EKRAN</button></div>
   </div>
@@ -1912,7 +1969,7 @@ body.menuOpen{
         <div class="titleTag">DEREN VS BARIŞ · BACK ALLEY RHYTHM BATTLE</div>
 
         <div class="mainChoices">
-          <button type="button" class="mainChoice start" id="startBtn" onclick="startGame()"><span>OYNA</span></button>
+          <button type="button" class="mainChoice start" id="startBtn" onclick="openMenuPanel('difficultyPanel')"><span>OYNA</span></button>
           <button type="button" class="mainChoice" id="songSelectBtn" onclick="openMenuPanel('songPanel')"><span>ŞARKI SEÇ</span></button>
           <button type="button" class="mainChoice" id="howBtn" onclick="openMenuPanel('howPanel')"><span>NASIL OYNANIR</span></button>
           <button type="button" class="mainChoice" id="settingsBtn" onclick="openMenuPanel('settingsPanel')"><span>AYARLAR</span></button>
@@ -1999,6 +2056,29 @@ body.menuOpen{
       </div>
     </div>
 
+    <div class="menuPanelScreen" id="difficultyPanel">
+      <div class="subMenuCard">
+        <div class="subMenuTop">
+          <h2>Zorluk Seç</h2>
+          <button type="button" class="backBtn" data-close-panel onclick="closeMenuPanels()">GERİ</button>
+        </div>
+        <div class="diffGrid">
+          <button type="button" class="diffBtn easy" onclick="chooseDifficulty('easy',this)">
+            <strong>KOLAY</strong>
+            <small>Daha seyrek notalar, daha geniş timing aralığı ve daha hafif cezalar.</small>
+          </button>
+          <button type="button" class="diffBtn normal" onclick="chooseDifficulty('normal',this)">
+            <strong>NORMAL</strong>
+            <small>Şimdiye kadarki standart Havalı Alalı dengesi.</small>
+          </button>
+          <button type="button" class="diffBtn hard" onclick="chooseDifficulty('hard',this)">
+            <strong>ZOR</strong>
+            <small>Daha sıkı timing, daha ağır miss cezaları ve daha az can toleransı.</small>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="menuPanelScreen" id="creditsPanel">
       <div class="subMenuCard">
         <div class="subMenuTop">
@@ -2062,15 +2142,38 @@ body.menuOpen{
       <div class="mmTag">DEREN VS BARIŞ · BACK ALLEY RHYTHM BATTLE</div>
 
       <div class="mmButtons">
-        <button type="button" class="mmBtn" data-mm-action="play">OYNA</button>
+        <button type="button" class="mmBtn" data-mm-action="difficulty">OYNA</button>
         <button type="button" class="mmBtn" data-mm-action="open" data-mm-panel="mmSongPanel">ŞARKI SEÇ</button>
         <button type="button" class="mmBtn" data-mm-action="open" data-mm-panel="mmHowPanel">NASIL OYNANIR</button>
         <button type="button" class="mmBtn" data-mm-action="open" data-mm-panel="mmSettingsPanel">AYARLAR</button>
       </div>
 
       <div class="mmFooter">
-        <span>v1.0.10 · <span id="mmJsState">JS ?</span></span>
+        <span>v1.1.0 · <span id="mmJsState">JS ?</span></span>
         <button type="button" class="mmLink" data-mm-action="open" data-mm-panel="mmCreditsPanel">KREDİLER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mmPanel" id="mmDifficultyPanel">
+    <div class="mmPanelCard">
+      <div class="mmPanelTop">
+        <h2>Zorluk Seç</h2>
+        <button type="button" class="mmBack" data-mm-action="close">GERİ</button>
+      </div>
+      <div class="mmDiffGrid">
+        <button type="button" class="mmDiffBtn easy" data-mm-action="choose-difficulty" data-difficulty="easy">
+          <strong>KOLAY</strong>
+          <small>Daha seyrek notalar · geniş timing · hafif cezalar</small>
+        </button>
+        <button type="button" class="mmDiffBtn normal" data-mm-action="choose-difficulty" data-difficulty="normal">
+          <strong>NORMAL</strong>
+          <small>Standart denge</small>
+        </button>
+        <button type="button" class="mmDiffBtn hard" data-mm-action="choose-difficulty" data-difficulty="hard">
+          <strong>ZOR</strong>
+          <small>Sıkı timing · ağır miss cezaları · düşük tolerans</small>
+        </button>
       </div>
     </div>
   </div>
@@ -2181,12 +2284,28 @@ body.menuOpen{
       return;
     }
 
+    if(action==='difficulty'){
+      closePanels();
+      const panel=document.getElementById('mmDifficultyPanel');
+      if(panel)panel.classList.add('show');
+      return;
+    }
+
+    if(action==='choose-difficulty'){
+      const diff=control.dataset.difficulty||'normal';
+      if(typeof window.chooseDifficulty==='function'){
+        window.chooseDifficulty(diff,control);
+      }else{
+        const state=document.getElementById('mmJsState');
+        if(state)state.textContent='GAME JS !';
+      }
+      return;
+    }
+
     if(action==='play'){
       control.disabled=true;
       control.textContent='HAZIRLANIYOR…';
 
-      // The actual game code is in the following script. Keep the menu bootstrap
-      // independent from it and call it only when it is available.
       if(typeof window.startGameMobile==='function'){
         window.startGameMobile(control);
       }else if(typeof window.startGame==='function'){
@@ -2265,6 +2384,59 @@ const colors=['#d75cff','#4db9ff','#6ce678','#ff5d61'];
 const keyLane={ArrowLeft:0,ArrowDown:1,ArrowUp:2,ArrowRight:3,a:0,s:1,w:2,d:3,A:0,S:1,W:2,D:3};
 const BPM=120, beat=60/BPM, hitY=72, spawnY=600, travel=1.75;
 const HIT={sick:.055,good:.110,bad:.175,miss:.19};
+
+const DIFFICULTIES={
+  easy:{
+    key:'easy',label:'KOLAY',
+    hit:{sick:.080,good:.155,bad:.235,miss:.265},
+    startHealth:65,playerKeep:.72,
+    emptyPenalty:.45,missPenalty:2.5,holdMissPenalty:3.0,oppDrain:.13,
+    sickHeal:2.6,goodHeal:1.55,badHeal:.45,holdHeal:1.35
+  },
+  normal:{
+    key:'normal',label:'NORMAL',
+    hit:{sick:.055,good:.110,bad:.175,miss:.190},
+    startHealth:50,playerKeep:1,
+    emptyPenalty:1.2,missPenalty:3.8,holdMissPenalty:4.5,oppDrain:.22,
+    sickHeal:2.0,goodHeal:1.1,badHeal:.25,holdHeal:1.0
+  },
+  hard:{
+    key:'hard',label:'ZOR',
+    hit:{sick:.043,good:.086,bad:.138,miss:.160},
+    startHealth:45,playerKeep:1,
+    emptyPenalty:1.65,missPenalty:5.0,holdMissPenalty:5.8,oppDrain:.30,
+    sickHeal:1.45,goodHeal:.72,badHeal:.10,holdHeal:.65
+  }
+};
+let difficultyKey='normal';
+let difficulty=DIFFICULTIES.normal;
+
+function applyDifficulty(key){
+  difficultyKey=DIFFICULTIES[key]?key:'normal';
+  difficulty=DIFFICULTIES[difficultyKey];
+  HIT.sick=difficulty.hit.sick;
+  HIT.good=difficulty.hit.good;
+  HIT.bad=difficulty.hit.bad;
+  HIT.miss=difficulty.hit.miss;
+  const songLabel=document.getElementById('song');
+  if(songLabel)songLabel.textContent=`ENTER THE PARTY · ${difficulty.label}`;
+}
+
+function chooseDifficulty(key,button){
+  applyDifficulty(key);
+  closeMenuPanels();
+  closeMobilePanels();
+  if(button){
+    button.disabled=true;
+    const strong=button.querySelector('strong');
+    if(strong)strong.textContent='HAZIRLANIYOR…';
+  }
+  if(window.matchMedia('(max-width:900px)').matches){
+    return startGameMobile(button);
+  }
+  return startGame({currentTarget:button});
+}
+window.chooseDifficulty=chooseDifficulty;
 const W=800,H=560;
 const oppX=[70,150,230,310], playerX=[490,570,650,730];
 
@@ -2461,7 +2633,13 @@ function analyzeAudioToChart(buffer){
 }
 
 function cloneChart(){
-  notes=chartTemplate.map(n=>({
+  const source=chartTemplate.filter(n=>{
+    if(n.side!=='deren' || difficulty.playerKeep>=1)return true;
+    // Deterministic density reduction: same easy chart every run.
+    const bucket=((n.id*37+n.lane*17)%100)/100;
+    return bucket<difficulty.playerKeep || n.duration>0;
+  });
+  notes=source.map(n=>({
     ...n,
     hit:false,
     missed:false,
@@ -2603,7 +2781,7 @@ function playCutscene(){
 
 function reset(){
   cancelAnimationFrame(raf);running=false;endShown=false;stopPlayback();cloneChart();
-  score=0;combo=0;misses=0;health=50;hits=0;
+  score=0;combo=0;misses=0;health=difficulty.startHealth;hits=0;
   derenImg.src=DEREN.idle;miloImg.src=MILO.idle;
   stageEl.style.setProperty('--songp','0');
   stageEl.classList.remove('beat','strongBeat');
@@ -2713,7 +2891,7 @@ function press(lane){
   }
 
   if(!best||d>HIT.bad){
-    combo=0;health-=1.2;updateHud('Boş basış');
+    combo=0;health-=difficulty.emptyPenalty;updateHud('Boş basış');
     if(audioMode==='metro')clickSound(90,.018);
     return;
   }
@@ -2725,9 +2903,9 @@ function press(lane){
   hits++;combo++;
 
   let txt,pts,col;
-  if(d<=HIT.sick){txt='SICK!';pts=350;col='#ff59b7';health+=2}
-  else if(d<=HIT.good){txt='GOOD';pts=200;col='#6ce678';health+=1.1}
-  else{txt='BAD';pts=80;col='#ffe265';health+=.25}
+  if(d<=HIT.sick){txt='SICK!';pts=350;col='#ff59b7';health+=difficulty.sickHeal}
+  else if(d<=HIT.good){txt='GOOD';pts=200;col='#6ce678';health+=difficulty.goodHeal}
+  else{txt='BAD';pts=80;col='#ffe265';health+=difficulty.badHeal}
 
   score+=pts+Math.min(combo,50)*2;
 
@@ -2764,7 +2942,7 @@ function releaseLane(lane){
     hits=Math.max(0,hits-1);
     misses++;
     combo=0;
-    health-=4.5;
+    health-=difficulty.holdMissPenalty;
     releaseHoldPose('deren');
     flash('HOLD MISS','#ff5d61');
     updateHud('HOLD MISS');
@@ -2775,7 +2953,7 @@ function releaseLane(lane){
     n.sustainActive=false;
     activeHolds[lane]=null;
     score+=180;
-    health+=1.0;
+    health+=difficulty.holdHeal;
     releaseHoldPose('deren');
     flash('HOLD!','#74e8ff');
     updateHud('Hold tamam');
@@ -2963,11 +3141,11 @@ function loop(){
       }else{
         pose('milo',n.lane);
       }
-      health-=.22;statePtr++;continue;
+      health-=difficulty.oppDrain;statePtr++;continue;
     }
 
     if(t>n.time+HIT.miss){
-      n.missed=true;misses++;combo=0;health-=3.8;
+      n.missed=true;misses++;combo=0;health-=difficulty.missPenalty;
       flash('MISS','#ff5d61');updateHud('MISS');
       const arr=playerLaneNotes[n.lane];
       while(lanePtr[n.lane]<arr.length && (arr[lanePtr[n.lane]].hit||arr[lanePtr[n.lane]].missed)) lanePtr[n.lane]++;
@@ -2990,7 +3168,7 @@ function loop(){
       n.sustainActive=false;
       activeHolds[lane]=null;
       score+=180;
-      health+=1.0;
+      health+=difficulty.holdHeal;
       combo++;
       releaseHoldPose('deren');
       flash('HOLD!','#74e8ff');
@@ -3078,7 +3256,7 @@ async function finish(){
   o.classList.add('resultMode');
   o.style.display='grid';
   o.innerHTML=`<div class="card"><div class="logo"><span>${health>0?'SONG CLEAR!':'FAILED'}</span></div>
-    <h2>Enter the Party — ${rank}</h2>
+    <h2>Enter the Party — ${rank}</h2><div class="small" style="margin-bottom:8px"><b>Zorluk: ${difficulty.label}</b></div>
     <div class="small">Score: <b>${score}</b><br>Hit: <b>${hits}/${totalPlayer}</b> · Miss: <b>${misses}</b><br>Basit isabet oranı: <b>%${acc}</b></div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button type="button" class="start" id="again">TEKRAR DENE</button>
@@ -3196,6 +3374,7 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+applyDifficulty('normal');
 reset();
 </script>
 </body>
