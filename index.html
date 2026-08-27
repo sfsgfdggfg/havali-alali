@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0915">
-<title>Havalı Alalı v1.8.3 — Exhilarate Difficulty 2.8</title>
+<title>Havalı Alalı v2.0.5 — Deren vs Crush</title>
 <style>
 :root{
   --pink:#ff4da6;--purple:#8c5cff;--blue:#4db9ff;--green:#6ce678;--red:#ff5d61;
@@ -1978,7 +1978,7 @@ body.menuOpen{
         <div id="analysisStatus">İlk başlatmada şarkı ritmi analiz edilecek.</div>
 
         <div class="menuFooter">
-          <span>v1.8.3</span>
+          <span>v2.0.5</span>
           <button type="button" class="menuTinyBtn" id="creditsBtn" onclick="openMenuPanel('creditsPanel')">KREDİLER</button>
         </div>
       </div>
@@ -2892,7 +2892,17 @@ function press(lane){
     if(n.time>t+.25)break;
   }
 
-  if(!best||d>HIT.bad){
+  // Miraç's final patterns require 3-key sequences (double-hold + tap
+  // or hold + double-tap). Give these authored multi-input notes a small
+  // sequential-entry grace window so browser/keyboard event ordering does
+  // not make the mechanic fail even when the player presses the keys together.
+  // Ouroboros notes identify Miraç directly on the note object.
+  const multiInputNote = best
+    && best.mech==='holdTap'
+    && (best.ouroOpp==='mirac' || best.ouroOpp==='oguzhan');
+  const inputBad = multiInputNote ? Math.max(HIT.bad,.220) : HIT.bad;
+
+  if(!best||d>inputBad){
     combo=0;health-=difficulty.emptyPenalty;updateHud('Boş basış');
     if(audioMode==='metro')clickSound(90,.018);
     return;
@@ -2935,6 +2945,18 @@ function releaseLane(lane){
 
   const t=timeNow();
   const end=n.time+n.duration;
+
+  // Miraç's Ouroboros mechanics can require three simultaneous inputs.
+  // Many keyboards/mobile layouts cannot reliably report those combinations.
+  // Once a Miraç hold head is hit, latch the sustain until its tail so the
+  // player can release the physical key and still perform the tap/chord part.
+  if(n.ouroOpp==='mirac' && n.stickyMultiHold && t<end-.10){
+    n.holding=true;
+    n.sustainActive=true;
+    heldLanes[lane]=true; // prevents the loop safety-net from cancelling it
+    updateHud('HOLD KİLİTLİ');
+    return;
+  }
 
   if(t<end-.10){
     n.holding=false;
@@ -3105,6 +3127,7 @@ function loop(){
   if(!running)return;
   const t=timeNow();
   if(window.__duoTick)window.__duoTick(t);
+  if(window.__ouroTick)window.__ouroTick(t);
   const songP=Math.max(0,Math.min(1,t/songLength));
 
   // Complex CSS scene variables used to update every frame. Updating ~8x/sec is visually
@@ -3457,6 +3480,33 @@ reset();
         {speaker:'EFE', side:'milo', pose:'right', text:'O zaman tempo düşmesin.'}
       ]
     },
+    ouroboros: {
+      key: 'ouroboros',
+      title: 'Ouroboros',
+      titleShort: 'OUROBOROS',
+      audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ouroboros.mp3',
+      bpm: 130,
+      fallbackLength: 161,
+      opponent: 'HERKES',
+      opponentBank: MILO,
+      baseDifficulty: '3.3',
+      finalSong: true,
+      subtitle: 'Deren vs Crush · Back Alley · 130 BPM · Zorluk 3.3 · Büyük Final',
+      credits: 'Ouroboros — Kevin MacLeod · CC BY 4.0',
+      cutscene: [
+        {speaker:'BARIŞ', side:'milo', opp:'baris', pose:'idle', text:'Başladığımız yere döndük.'},
+        {speaker:'DEREN', side:'deren', pose:'idle', text:'Bu sefer yalnız değilsin.'},
+        {speaker:'ARDA', side:'milo', opp:'arda', pose:'idle', text:'Şansla buraya gelmedin. Bunu artık biliyoruz.'},
+        {speaker:'EFE', side:'milo', opp:'efe', pose:'up', text:'Ama finalde ritim biraz daha hızlı akar.'},
+        {speaker:'MİRAÇ', side:'milo', opp:'mirac', pose:'idle', text:'Bir hata, bir parmak kilidi… yeter.'},
+        {speaker:'BATU', side:'milo', opp:'batu', pose:'idle', text:'Tek vuruş da yetmeyecek.'},
+        {speaker:'MILAN', side:'milo', opp:'milan', pose:'left', text:'Konuşmayı bırakın.'},
+        {speaker:'OĞUZHAN', side:'milo', opp:'oguzhan', pose:'idle', text:'Haklı. Şimdi hepsini birden göstereceğiz.'},
+        {speaker:'DEREN', side:'deren', pose:'right', text:'Yedi kişi olmanız bir şeyi değiştirmiyor.'},
+        {speaker:'BARIŞ', side:'milo', opp:'baris', pose:'right', text:'Değiştirir.'},
+        {speaker:'DEREN', side:'deren', pose:'idle', text:'O zaman görelim.'}
+      ]
+    },
     exhilarate: {
       key: 'exhilarate',
       title: 'Exhilarate',
@@ -3557,6 +3607,22 @@ reset();
   };
 
 
+
+  const ouroStyle=document.createElement('style');
+  ouroStyle.textContent=`
+    #stage.ouroborosMode #neonSign:before{content:"OUROBOROS · FINAL"}
+    #stage.ouroborosMode #neonSign{border-color:#eee;color:#fff;text-shadow:0 0 8px #fff,0 0 24px #ff4da6}
+    #stage.ouroSwap #milo{animation:ouroSwapFlash .26s ease-out}
+    @keyframes ouroSwapFlash{
+      0%{opacity:.15;transform:translateX(-18px) scale(.94)}
+      55%{opacity:1;transform:translateX(5px) scale(1.03)}
+      100%{opacity:1;transform:none}
+    }
+    #stage.ouroborosMode[data-ouro-opp="oguzhan"] #milo img{
+      filter:hue-rotate(38deg) saturate(1.45) contrast(1.08) brightness(.92) drop-shadow(0 12px 10px #000b);
+    }
+  `;
+  document.head.appendChild(ouroStyle);
 
   const oguzhanStyle=document.createElement('style');
   oguzhanStyle.textContent=`
@@ -3684,6 +3750,18 @@ reset();
   const cutMiracImg=document.getElementById('cutMiracImg');
   cutMiracImg.src=MIRAC.idle;
 
+  const OURO_OPPS={
+    baris:{name:'BARIŞ',bank:MILO,accent:'#a679ff'},
+    arda:{name:'ARDA',bank:ARDA,accent:'#80966d'},
+    efe:{name:'EFE',bank:EFE,accent:'#4db9ff'},
+    mirac:{name:'MİRAÇ',bank:MIRAC,accent:'#1fbdb5'},
+    batu:{name:'BATU',bank:BATU,accent:'#e88945'},
+    milan:{name:'MILAN',bank:MILAN,accent:'#ff5d61'},
+    oguzhan:{name:'OĞUZHAN',bank:OGUZHAN,accent:'#72a7ff'}
+  };
+  let ouroCurrentOpp='baris';
+  let ouroSegmentPtr=0;
+
   let duoFrontActor='baris';
   let duoSwapTimes=[];
   let duoSwapPtr=0;
@@ -3691,6 +3769,42 @@ reset();
   function isDuoSong(){
     return getSong().key==='newerwave';
   }
+
+  function isOuroborosSong(){
+    return getSong().key==='ouroboros';
+  }
+
+  function setOuroOpponent(key,animate=true){
+    const info=OURO_OPPS[key]||OURO_OPPS.baris;
+    ouroCurrentOpp=key;
+    OPP_BANK=info.bank;
+    if(animate && isOuroborosSong()){
+      stageEl.classList.add('ouroSwap');
+      clearTimeout(setOuroOpponent._t);
+      setOuroOpponent._t=setTimeout(()=>stageEl.classList.remove('ouroSwap'),260);
+    }
+    if(miloImg)miloImg.src=info.bank.idle;
+    const plate=document.querySelector('#milo .nameplate');
+    if(plate){plate.textContent=info.name;plate.style.color=info.accent;}
+    const names=document.querySelectorAll('#names span');
+    if(names[0])names[0].textContent=info.name;
+    stageEl.dataset.ouroOpp=key;
+  }
+
+  function resetOuroState(){
+    ouroSegmentPtr=0;
+    setOuroOpponent('baris',false);
+  }
+
+  window.__ouroTick=function(t){
+    if(!isOuroborosSong()||!running||!ouroSegments.length)return;
+    while(ouroSegmentPtr<ouroSegments.length-1 && t>=ouroSegments[ouroSegmentPtr].end){
+      ouroSegmentPtr++;
+    }
+    const seg=ouroSegments[ouroSegmentPtr];
+    if(seg && ouroCurrentOpp!==seg.key)setOuroOpponent(seg.key,true);
+  };
+
 
   function setDuoFront(actor,animate=true){
     duoFrontActor=actor==='mirac'?'mirac':'baris';
@@ -3781,10 +3895,10 @@ reset();
         ${songBtn('gettingitdone','Getting it Done','Deren vs Batu · Zorluk 2.0 · 135 BPM · Çift Tap')}
         ${songBtn('scattershot','Scattershot','Deren vs Milan · Zorluk 2.4 · 152 BPM · Saf Yetenek')}
         ${songBtn('exhilarate','Exhilarate','Deren vs Oğuzhan · Zorluk 2.8 · 170 BPM · Mekanik Karmaşıklık')}
-        <button class="trackChoice futureTrack" type="button" disabled><span><strong>Ouroboros</strong><small>Hafta 2 Final · YAKINDA</small></span><span class="ghostBadge">KİLİTLİ</span></button>
+        ${songBtn('ouroboros','Ouroboros','Deren vs CRUSH · Zorluk 3.3 · 130 BPM · BÜYÜK FİNAL')}
       </div>
 
-      <div class="settingsHint">Hafta 1: ilk dört şarkı. Hafta 2: Getting it Done, Scattershot, Exhilarate ve finalde Ouroboros. Getting it Done'da yoğun çift tap var. Scattershot saf refleks odaklıdır. Exhilarate 2.8 ise hold+tap, çift nota, kısa burst ve mekanik geçişleri bir arada kullanır.</div>`;
+      <div class="settingsHint">Hafta 1: ilk dört şarkı. Hafta 2: Getting it Done, Scattershot, Exhilarate ve büyük final Ouroboros. Getting it Done'da yoğun çift tap var. Scattershot saf refleks odaklıdır. Exhilarate 2.8 mekanik karmaşıklık odaklıdır. Ouroboros 3.3'te tüm rakipler kendi imza mekanikleriyle geri döner. Miraç bölümünde yalnızca zorlayıcı hold + tap kombinasyonları vardır; çift hold ve hold içinde çift tap kaldırıldı. Miraç bölümündeki üçlü girişlerde tuşlar çok kısa aralıkla sırayla da basılabilir.</div>`;
   }
 
   function buildMobileSongMenu(){
@@ -3810,10 +3924,10 @@ reset();
         ${songBtn('gettingitdone','Getting it Done','Deren vs Batu · 2.0 · 135 BPM · Çift Tap')}
         ${songBtn('scattershot','Scattershot','Deren vs Milan · 2.4 · 152 BPM · Saf Yetenek')}
         ${songBtn('exhilarate','Exhilarate','Deren vs Oğuzhan · 2.8 · 170 BPM · Mekanik Karmaşıklık')}
-        <button type="button" class="mmTrack futureTrack" disabled><b>Ouroboros · YAKINDA</b><div class="mmSmall">Hafta 2 Final</div></button>
+        ${songBtn('ouroboros','Ouroboros','Deren vs CRUSH · 3.3 · 130 BPM · BÜYÜK FİNAL')}
       </div>
 
-      <div class="mmSmall">Getting it Done çift tap odaklıdır. Scattershot saf refleks odaklıdır. Exhilarate 2.8 mekanik karmaşıklık odaklıdır.</div>`;
+      <div class="mmSmall">Getting it Done çift tap, Scattershot saf spam/refleks, Exhilarate mekanik karmaşıklık odaklıdır. Ouroboros büyük finaldir.</div>`;
   }
 
   function updateCredits(){
@@ -3824,7 +3938,8 @@ reset();
       • Newer Wave — Kevin MacLeod · CC BY 4.0<br>
       • Getting it Done — Kevin MacLeod · CC BY 4.0<br>
       • Scattershot — Kevin MacLeod · CC BY 4.0<br>
-      • Exhilarate — Kevin MacLeod · CC BY 4.0<br><br>
+      • Exhilarate — Kevin MacLeod · CC BY 4.0<br>
+      • Ouroboros — Kevin MacLeod · CC BY 4.0<br><br>
       Havalı Alalı için kullanılan oyun tasarımı, kod ve bitmap karakter düzenlemeleri proje için hazırlanmıştır.`;
     const desktopCredits=document.querySelector('#creditsPanel .creditsText');
     if(desktopCredits)desktopCredits.innerHTML=credits;
@@ -3838,11 +3953,13 @@ reset();
     configureDuoForSong(song);
     stageEl.classList.toggle('batuMode',song.key==='gettingitdone');
     stageEl.classList.toggle('oguzhanMode',song.key==='exhilarate');
+    stageEl.classList.toggle('ouroborosMode',song.key==='ouroboros');
+    if(song.key==='ouroboros')resetOuroState();
     window.__oppCanvasName=song.opponent;
     
     // Cipher: playback is intentionally decoupled from waveform fetch/CORS.
     // Safari can play the remote MP3 directly even when fetch/decode is blocked.
-    if(song.key==='cipher'||song.key==='newerwave'||song.key==='gettingitdone'||song.key==='scattershot'||song.key==='exhilarate'){
+    if(song.key==='cipher'||song.key==='newerwave'||song.key==='gettingitdone'||song.key==='scattershot'||song.key==='exhilarate'||song.key==='ouroboros'){
       songAudio.removeAttribute('crossorigin');
     }else{
       songAudio.setAttribute('crossorigin','anonymous');
@@ -4234,6 +4351,226 @@ reset();
     return a;
   }
 
+
+
+  let ouroSegments=[];
+
+  function buildOuroborosChart(song){
+    const beatLen=60/song.bpm;
+    const a=[]; let id=0;
+    const startBeat=8;
+    const phraseBeats=8;
+    const phrasesPerOpponent=6;
+    const opponents=['baris','arda','efe','mirac','batu','milan','oguzhan'];
+    const oppAuto={
+      baris:[0,1,2,3,1,2,0,3],
+      arda:[0,2,1,3,2,0,3,1],
+      efe:[3,2,0,1,3,1,2,0],
+      mirac:[1,3,0,2,1,0,3,2],
+      batu:[0,3,1,2,0,2,1,3],
+      milan:[0,3,0,3,1,2,1,2],
+      oguzhan:[2,0,3,1,0,2,1,3]
+    };
+
+    ouroSegments=[];
+
+    function add(side,time,lane,strength,phrase,step,extra={}){
+      a.push({id:id++,side,time,lane,strength,phrase,phraseStep:step,...extra});
+    }
+    function chord(time,l1,l2,phrase,step,extra={}){
+      const base=id;
+      add('deren',time,l1,2.05,phrase,step,{...extra,chord:true,forceKeep:true});
+      add('deren',time,l2,2.05,phrase,step,{...extra,chord:true,forceKeep:true,chordMate:base});
+      a[a.length-2].chordMate=id-1;
+    }
+    function doubleHold(time,l1,l2,dur,phrase,step,extra={}){
+      add('deren',time,l1,2.08,phrase,step,{...extra,duration:dur,forceKeep:true,mech:'doubleHold',stickyMultiHold:true});
+      add('deren',time,l2,2.08,phrase,step+1,{...extra,duration:dur,forceKeep:true,mech:'doubleHold',stickyMultiHold:true});
+    }
+
+    for(let oi=0;oi<opponents.length;oi++){
+      const opp=opponents[oi];
+      const sectionStartBeat=startBeat+oi*phrasesPerOpponent*phraseBeats;
+      const sectionEndBeat=sectionStartBeat+phrasesPerOpponent*phraseBeats;
+      ouroSegments.push({key:opp,start:sectionStartBeat*beatLen,end:sectionEndBeat*beatLen});
+
+      for(let local=0;local<phrasesPerOpponent;local++){
+        const phrase=oi*phrasesPerOpponent+local;
+        const b=sectionStartBeat+local*phraseBeats;
+        const pat=oppAuto[opp];
+
+        if(opp==='milan'){
+          if(local<2){
+            for(let i=0;i<8;i++) add('milo',(b+i)*beatLen,pat[i],1.55,phrase,i,{ouroOpp:opp});
+          }else{
+            const block=local-2;
+            const lr=(block%2===0);
+            const lanes=lr?[0,3]:[2,1];
+            for(let s=0;s<12;s++){
+              add('deren',(b+0.85+s*.3)*beatLen,lanes[s%2],2.18,phrase,s,{
+                ouroOpp:opp,spam:true,forceKeep:true
+              });
+            }
+          }
+          continue;
+        }
+
+        const side=local%2===0?'milo':'deren';
+        if(side==='milo'){
+          for(let i=0;i<8;i++) add('milo',(b+i)*beatLen,pat[i],1.5,phrase,i,{ouroOpp:opp});
+          continue;
+        }
+
+        if(opp==='baris'){
+          // AKIŞ: genuinely challenging continuous flow, but no burst gimmick.
+          const flow=(local%4===1)
+            ? [0,1,3,2,0,2,1,3,0,3,2]
+            : [3,2,0,1,3,1,2,0,3,0,1];
+          const offs=[0,.65,1.3,1.95,2.6,3.25,3.9,4.55,5.2,5.85,6.5];
+          for(let i=0;i<flow.length;i++){
+            add('deren',(b+offs[i])*beatLen,flow[i],1.94,phrase,i,{ouroOpp:opp,flow:true});
+          }
+
+        }else if(opp==='arda'){
+          // TEKNİK: denser four-lane reading, still clean and gimmick-free.
+          const tech=(local%4===1)
+            ? [0,2,1,3,0,3,1,2,3,0]
+            : [3,1,2,0,3,0,2,1,0,3];
+          const offs=[0,.7,1.4,2.1,2.8,3.55,4.3,5.05,5.8,6.5];
+          for(let i=0;i<tech.length;i++){
+            add('deren',(b+offs[i])*beatLen,tech[i],1.96,phrase,i,{ouroOpp:opp,technical:true});
+          }
+
+        }else if(opp==='efe'){
+          // BURST: one readable setup, one strong but controlled 4-note burst.
+          add('deren',(b+.25)*beatLen,2,1.78,phrase,0,{ouroOpp:opp});
+          add('deren',(b+1.45)*beatLen,0,1.8,phrase,1,{ouroOpp:opp});
+          const burst=[0,2,3,1];
+          for(let s=0;s<4;s++){
+            add('deren',(b+2.65+s*.48)*beatLen,burst[(s+local)%burst.length],2.0,phrase,10+s,{
+              ouroOpp:opp,burst:true,forceKeep:true
+            });
+          }
+          add('deren',(b+5.15)*beatLen,1,1.84,phrase,20,{ouroOpp:opp});
+          add('deren',(b+6.35)*beatLen,3,1.84,phrase,21,{ouroOpp:opp});
+
+        }else if(opp==='mirac'){
+          // MİRAÇ NERF / RELIABILITY FIX:
+          // Only demanding hold + tap combinations.
+          // No double-hold, no double-tap-inside-hold.
+          const variant=(local%4===1);
+
+          if(variant){
+            // Hold 1, tap 3 while holding, then exit to a second hold+tap.
+            add('deren',(b+.65)*beatLen,0,2.0,phrase,0,{
+              ouroOpp:opp,duration:beatLen*2.15,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+1.55)*beatLen,2,2.0,phrase,10,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+2.35)*beatLen,3,2.0,phrase,11,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+
+            add('deren',(b+4.0)*beatLen,1,2.0,phrase,20,{
+              ouroOpp:opp,duration:beatLen*1.85,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+4.85)*beatLen,3,2.0,phrase,30,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+5.55)*beatLen,0,2.0,phrase,31,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+
+          }else{
+            // Alternating hold lanes with two single taps during each hold.
+            add('deren',(b+.75)*beatLen,3,2.0,phrase,0,{
+              ouroOpp:opp,duration:beatLen*2.0,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+1.45)*beatLen,1,2.0,phrase,10,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+2.15)*beatLen,0,2.0,phrase,11,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+
+            add('deren',(b+4.1)*beatLen,2,2.0,phrase,20,{
+              ouroOpp:opp,duration:beatLen*1.75,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+4.8)*beatLen,0,2.0,phrase,30,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+5.45)*beatLen,3,2.0,phrase,31,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+          }
+
+        }else if(opp==='batu'){
+          const pairs=[[0,3],[2,1],[0,2],[3,1],[0,1],[3,2],[0,3]];
+          const offs=[0,.95,1.9,2.85,3.8,4.75,5.7];
+          for(let i=0;i<pairs.length;i++){
+            const pair=pairs[(i+local)%pairs.length];
+            chord((b+offs[i])*beatLen,pair[0],pair[1],phrase,i,{ouroOpp:opp,batuChord:true});
+          }
+
+        }else if(opp==='oguzhan'){
+          // OĞUZHAN BUFF: denser mechanical-complexity synthesis.
+          const mode=Math.floor(local/2)%3;
+
+          if(mode===0){
+            // Hold+tap -> chord -> fast exit.
+            add('deren',(b+.2)*beatLen,0,1.9,phrase,0,{ouroOpp:opp});
+            add('deren',(b+1.15)*beatLen,2,2.05,phrase,1,{
+              ouroOpp:opp,duration:beatLen*1.6,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+1.95)*beatLen,3,2.05,phrase,2,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+2.55)*beatLen,1,2.0,phrase,3,{ouroOpp:opp});
+            chord((b+3.55)*beatLen,0,2,phrase,10,{ouroOpp:opp});
+            add('deren',(b+4.45)*beatLen,3,1.95,phrase,20,{ouroOpp:opp});
+            add('deren',(b+5.25)*beatLen,1,1.95,phrase,21,{ouroOpp:opp});
+            add('deren',(b+6.05)*beatLen,2,1.95,phrase,22,{ouroOpp:opp});
+
+          }else if(mode===1){
+            // Chord -> 5-note burst -> hold exit.
+            chord((b+.45)*beatLen,0,3,phrase,0,{ouroOpp:opp});
+            add('deren',(b+1.35)*beatLen,1,1.92,phrase,1,{ouroOpp:opp});
+
+            const seq=[2,0,3,1,2];
+            for(let s=0;s<5;s++){
+              add('deren',(b+2.05+s*.36)*beatLen,seq[s],2.05,phrase,10+s,{
+                ouroOpp:opp,burst:true,forceKeep:true
+              });
+            }
+
+            add('deren',(b+4.55)*beatLen,3,2.05,phrase,20,{
+              ouroOpp:opp,duration:beatLen*1.35,forceKeep:true,mech:'holdTap',stickyMultiHold:true
+            });
+            add('deren',(b+5.2)*beatLen,0,2.0,phrase,21,{
+              ouroOpp:opp,forceKeep:true,mech:'holdTap'
+            });
+            add('deren',(b+6.05)*beatLen,1,1.95,phrase,22,{ouroOpp:opp});
+
+          }else{
+            // High-density technical chain with a late chord.
+            const seq=[0,2,3,1,2,0,1,3,0,2];
+            const offs=[0,.62,1.24,1.9,2.56,3.22,3.9,4.58,5.28,6.02];
+            for(let i=0;i<10;i++){
+              add('deren',(b+offs[i])*beatLen,seq[i],2.0,phrase,i,{
+                ouroOpp:opp,technical:true
+              });
+            }
+            chord((b+6.55)*beatLen,1,3,phrase,20,{ouroOpp:opp});
+          }
+        }
+      }
+    }
+
+    a.sort((x,y)=>x.time-y.time||x.lane-y.lane||x.id-y.id);
+    a.forEach((n,idx)=>n.id=idx);
+    return a;
+  }
 
   function buildExhilarateChart(song){
     const beatLen=60/song.bpm;
@@ -4664,33 +5001,37 @@ reset();
     // cross-origin fetch/decode step even though it can stream the MP3 normally.
     // We therefore use a deterministic 150 BPM authored chart and let <audio>
     // stream the real Cipher recording directly.
-    if(song.key==='cipher'||song.key==='pinball'||song.key==='newerwave'||song.key==='gettingitdone'||song.key==='scattershot'||song.key==='exhilarate'){
+    if(song.key==='cipher'||song.key==='pinball'||song.key==='newerwave'||song.key==='gettingitdone'||song.key==='scattershot'||song.key==='exhilarate'||song.key==='ouroboros'){
       audioBuffer=null;
       songLength=song.fallbackLength;
       chartTemplate=song.key==='newerwave'
         ? buildNewerWaveChart(song)
-        : (song.key==='exhilarate'
-            ? buildExhilarateChart(song)
-            : (song.key==='scattershot'
-                ? buildScattershotChart(song)
-                : (song.key==='gettingitdone'
-                    ? buildGettingItDoneChart(song)
-                    : (song.key==='pinball'?buildPinballChart(song):fallbackChartForSong(song)))));
+        : (song.key==='ouroboros'
+            ? buildOuroborosChart(song)
+            : (song.key==='exhilarate'
+                ? buildExhilarateChart(song)
+                : (song.key==='scattershot'
+                    ? buildScattershotChart(song)
+                    : (song.key==='gettingitdone'
+                        ? buildGettingItDoneChart(song)
+                        : (song.key==='pinball'?buildPinballChart(song):fallbackChartForSong(song))))));
       analysisMeta={mode:'authored-bpm',song:song.title,bpm:song.bpm,noteCount:chartTemplate.length};
       analysisReady=true;
       cloneChart();
       if(statusEl){
-        statusEl.textContent=song.key==='newerwave'
-          ? `Newer Wave hazır: Duo Battle · 110 BPM · dengeli zorluk 2.0 · ${chartTemplate.length} nota`
-          : (song.key==='exhilarate'
-              ? `Exhilarate hazır: Oğuzhan · 170 BPM · zorluk 2.8 · mekanikler dönüşümlü, daha temiz yoğunluk · ${chartTemplate.length} nota`
-              : (song.key==='scattershot'
-                  ? `Scattershot hazır: Milan · 152 BPM · kontrollü normal seriler + 12 notalık 0.3 beat spam · hold yok · çift tap yok · ${chartTemplate.length} nota`
-                  : (song.key==='gettingitdone'
-                      ? `Getting it Done hazır: Batu · 135 BPM · zorluk 2.0 · yoğun çift tap · ${chartTemplate.length} nota`
-                      : (song.key==='pinball'
-                          ? `Pinball Spring 160 hazır: gerçek şarkı · dengeli 1.5 chart · ${chartTemplate.length} nota`
-                          : `Cipher hazır: gerçek şarkı · 150 BPM tam yoğunluk · güvenli hold · tam phrase bitişi · ${chartTemplate.length} nota`))));
+        statusEl.textContent=song.key==='ouroboros'
+          ? `Ouroboros hazır: Deren vs CRUSH · 130 BPM · zorluk 3.3 · Miraç sadeleştirildi, Oğuzhan bufflandı · ${chartTemplate.length} nota`
+          : (song.key==='newerwave'
+              ? `Newer Wave hazır: Duo Battle · 110 BPM · dengeli zorluk 2.0 · ${chartTemplate.length} nota`
+              : (song.key==='exhilarate'
+                  ? `Exhilarate hazır: Oğuzhan · 170 BPM · zorluk 2.8 · mekanikler dönüşümlü, daha temiz yoğunluk · ${chartTemplate.length} nota`
+                  : (song.key==='scattershot'
+                      ? `Scattershot hazır: Milan · 152 BPM · kontrollü normal seriler + 12 notalık 0.3 beat spam · hold yok · çift tap yok · ${chartTemplate.length} nota`
+                      : (song.key==='gettingitdone'
+                          ? `Getting it Done hazır: Batu · 135 BPM · zorluk 2.0 · yoğun çift tap · ${chartTemplate.length} nota`
+                          : (song.key==='pinball'
+                              ? `Pinball Spring 160 hazır: gerçek şarkı · dengeli 1.5 chart · ${chartTemplate.length} nota`
+                              : `Cipher hazır: gerçek şarkı · 150 BPM tam yoğunluk · güvenli hold · tam phrase bitişi · ${chartTemplate.length} nota`)))));
       }
       return;
     }
@@ -4735,6 +5076,7 @@ reset();
     if(names[0]) names[0].textContent = oppName;
     const lbl = document.getElementById('song');
     if(lbl) lbl.textContent = songLabelText();
+    if(isOuroborosSong())resetOuroState();
   };
 
   function opponentVisualTarget(){
@@ -4765,6 +5107,18 @@ reset();
     const target=side==='deren'?{img:derenImg,bank:DEREN}:opponentVisualTarget();
     const img=target.img,bank=target.bank;
     clearTimeout(img._t);
+
+    // If Deren is still holding another lane (possible in Miraç double-holds),
+    // keep a hold pose instead of snapping back to idle.
+    if(side==='deren'){
+      const otherLane=activeHolds.findIndex(h=>h && h.holding && !h.holdFailed && !h.holdComplete);
+      if(otherLane>=0){
+        img.src=bank[laneNames[otherLane]]||bank.idle;
+        img.classList.add('pose');
+        return;
+      }
+    }
+
     img.src=bank.idle;
     img.classList.remove('pose');
   };
@@ -4791,6 +5145,13 @@ reset();
     const speakerTag=document.getElementById('speakerTag');
     const dialogText=document.getElementById('dialogText');
 
+    if(isOuroborosSong() && step.side==='milo' && step.opp){
+      const info=OURO_OPPS[step.opp]||OURO_OPPS.baris;
+      OPP_BANK=info.bank;
+      cutMiloImg.src=info.bank[step.pose||'idle']||info.bank.idle;
+      speakerTag.style.background=info.accent;
+    }
+
     if(isDuoSong()){
       const actor=step.side==='deren'?'deren':(step.duoActor||'baris');
       miloBox.classList.toggle('active',actor==='baris');
@@ -4816,7 +5177,9 @@ reset();
       derenBox.classList.toggle('active',step.side==='deren');
       derenBox.classList.toggle('inactive',step.side!=='deren');
       speakerTag.textContent=step.speaker;
-      speakerTag.style.background=step.side==='milo'?'#a679ff':'#ff5aad';
+      if(!(isOuroborosSong() && step.side==='milo' && step.opp)){
+        speakerTag.style.background=step.side==='milo'?'#a679ff':'#ff5aad';
+      }
       dialogText.textContent=step.text;
       setCutPose('milo','idle');
       setCutPose('deren','idle');
@@ -4835,6 +5198,7 @@ reset();
     document.getElementById('cutscene').style.display = 'none';
     setCutPose('milo','idle');
     setCutPose('deren','idle');
+    if(isOuroborosSong())resetOuroState();
     if(cutsceneResolver){ const resolve=cutsceneResolver; cutsceneResolver=null; resolve(); }
   };
   playCutscene = function(){
